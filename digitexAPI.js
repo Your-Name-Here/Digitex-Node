@@ -23,7 +23,7 @@ class DigitexAPI extends EVENTS {
 			spread: {
 				ask: 0, bid: 0, gap: () => {
 
-					return ( ( this.orderbook.spread.ask - this.orderbook.spread.bid )/this.tickSize )-1; 
+					return ( ( this.orderbook.spread.ask - this.orderbook.spread.bid )/this.tickSize )-1;
 
 				}
 			},
@@ -32,15 +32,15 @@ class DigitexAPI extends EVENTS {
 				this.orderbook.book.bids = bids; this.orderbook.book.asks = asks;
 				this.orderbook.spread.bid = Math.max( ...this.orderbook.book.bids.map( e => {
 
-					return e[0]; 
+					return e[0];
 
 				} ) );
 				this.orderbook.spread.ask = Math.min( ...this.orderbook.book.asks.map( e => {
 
-					return e[0]; 
+					return e[0];
 
 				} ) );
-			
+
 			}
 		};
 		this.orders = [];
@@ -52,19 +52,22 @@ class DigitexAPI extends EVENTS {
 
 			this.rateLimit.current = 0;
 
-		}, 1000 ); // Digitex api rate limit is max of 10 per second. We reset the calls to 0 every second. 
+		}, 1000 ); // Digitex api rate limit is max of 10 per second. We reset the calls to 0 every second.
+
 		this.ws = new ws( 'wss://ws.mapi.digitexfutures.com' );
+
 		this.rateLimit = {
 			current: 0,
 			max: 10
 		};
+
 		this.send = msg => {
 
 			if ( this.rateLimit.current >= this.rateLimit.max || !this.connected ) {
 
 				setTimeout( () => {
 
-					this.send( msg ); 
+					this.send( msg );
 
 				}, this.retryMS ); // If we are not at or above the current rate limit, send it, otherwise wait for this.retryMS (default: 250ms) miliseconds to resend the same msg.
 
@@ -75,7 +78,7 @@ class DigitexAPI extends EVENTS {
 			this.ws.send( msg );
 
 			this.rateLimit.current++;
-		
+
 		};
 		this.errorCodes = {
 			10: 'ID Doesn\'t exist.',
@@ -122,7 +125,7 @@ class DigitexAPI extends EVENTS {
 		this.getError = errID => {
 
 			return this.errorCodes[errID] || 'Unknown Error Code';
-		
+
 		};
 		this.connect();
 
@@ -131,75 +134,95 @@ class DigitexAPI extends EVENTS {
 			if ( msg.data == 'ping' ) {
 
 				this.send( 'pong' ); return;
-			
+
 			}
 			const data = JSON.parse( msg.data.toString() ).data;
 			const channel = JSON.parse( msg.data.toString() ).ch;
 			const id = JSON.parse( msg.data.toString() ).id;
+
 			if ( id == 1 ) {
- 
-				console.log( '    Authorized' );
+
+				console.log( '    Authorized'.green );
 				this.requestTraderInfo();
-			
+
 			}
 			if ( channel == 'index' ) {
 
-				this.emit( 'spotUpdate', data.spotPx ); this.spot = data.spotPx.toFixed( 0 ) * 1; 
+				this.emit( 'spotUpdate', data.spotPx ); this.spot = data.spotPx.toFixed( 0 ) * 1;
+
+			}
+			else if ( typeof channel == 'string' && channel.includes( 'kline_' ) ) {
+
+				this.emit( 'kline', {
+					ID: data.id,
+					close: data.c,
+					high: data.h,
+					interval: data.interval,
+					low: data.l,
+					open: data.o,
+					volume: data.v
+				} );
 
 			}
 			else if ( typeof channel == 'string' && channel.includes( 'orderbook_' ) ) {
-                
+
 				if ( !this.spot ) {
 
-					return; 
+					return;
 
 				}
+
 				this.orderbook.update( data.bids, data.asks );
+
 				if ( this.spreadGap != this.curGap ) {
 
-					this.curGap = this.spreadGap; this.emit( 'gapChange', this.curGap ); 
+					this.curGap = this.spreadGap; this.emit( 'gapChange', this.curGap );
 
 				}
-			
+
 			}
 			else if ( channel == 'orderFilled' ) {
-                
+
 				this.orders = this.orders.filter( order => {
 
 					if ( !order.is( data.origClOrdId ) ) {
 
-						return true; 
+						return true;
 
 					} else {
 
 						return false;
 
 					}
-				
+
 				} );
 				this.emit( 'orderFilled', data );
-			
+
 			}
 			else if ( channel == 'trades' ) {
 
 				this.emit( 'trades', data.trades );
+
 				const maxTs = Math.max.apply( Math, data.trades.map( function ( o ) {
 
-					return o.ts; 
+					return o.ts;
 
 				} ) );
+
 				const t = this.futuresPrice;
+
 				this.futuresPrice = data.trades.filter( trade => {
 
-					return trade.ts = maxTs; 
+					return trade.ts = maxTs;
 
 				} )[0].px;
-				if( t != this.futuresPrice ){
+
+				if ( t != this.futuresPrice ) {
 
 					this.emit( 'futuresPxUpdate', this.futuresPrice );
 
 				}
-			
+
 			}
 			else if ( channel == 'orderStatus' ) {
 
@@ -214,35 +237,35 @@ class DigitexAPI extends EVENTS {
 					const o = new Order( data );
 					this.orders.push( o );
 					this.emit( 'orderPlaced', o );
-				
+
 				}
 				else if ( data.orderStatus == 'REJECTED' ) {
 
 					this.emit( 'orderRejected', this.getError( data.errCode ) );
-				
+
 				}
 				else {
 
 					this.orders.forEach( order => {
 
 						// Otherwise Update it with the new data.
-						console.log( ( 'Unknown Status: '+data.orderStatus ) );
+						console.log( ( `Unknown Status: ${ data.orderStatus }` ).red );
 						//TODO Create a position here
 						if ( order.is( data.origClOrdId ) ) {
 
-							order.update( data ); 
+							order.update( data );
 
 						}
 						else {
 
-							this.orders.push( new Order( data ) ); 
+							this.orders.push( new Order( data ) );
 
 						}
-					
+
 					} );
-				
+
 				}
-			
+
 			}
 			else if ( channel == 'orderCancelled' ) {
 
@@ -257,12 +280,12 @@ class DigitexAPI extends EVENTS {
 					this.orders = this.orders.filter( order => {
 
 						return !order.is( o.origClOrdId );
-					
+
 					} );
 					this.emit( 'orderCancelled', o );
-				
+
 				} );
-			
+
 			}
 			else if ( channel == 'traderStatus' ) {
 
@@ -278,19 +301,19 @@ class DigitexAPI extends EVENTS {
 
 					order.symbol = data.symbol;
 					this.orders.push( new Order( order ) );
-				
+
 				} );
 				data.conditionalOrders.forEach( order => {
 
 					order.symbol = data.symbol;
 					this.conditionalOrders.push( new Order( order ) );
-				
+
 				} );
 				data.contracts.forEach( contract => {
 
 					contract.symbol = data.symbol;
 					this.positions.push( new Position( contract ) );
-				
+
 				} );
 				console.log( '    Trader Balance(DGTX):     ', this.trader.balance );
 				console.log( '    Trader Orders:            ', this.orders.length );
@@ -299,7 +322,7 @@ class DigitexAPI extends EVENTS {
 				console.log( '    Trader PnL:               ', this.trader.pnl );
 				console.log( '    Trader Unrealized PnL:    ', this.trader.upnl );
 				console.log( '' );
-			
+
 			}
 			//Conditional Orders
 			else if ( channel == 'condOrderStatus' ) {
@@ -314,7 +337,7 @@ class DigitexAPI extends EVENTS {
 						const order = new ConditionalOrder( o );
 						this.conditionalOrders.push( order );
 						this.emit( 'conditionalPlaced', order );
-					
+
 					} );
 					break;
 				case 'CANCELLED':
@@ -322,11 +345,11 @@ class DigitexAPI extends EVENTS {
 
 						this.conditionalOrders = this.conditionalOrders.filter( order => {
 
-							return !order.is( o.clOrdId ); 
+							return !order.is( o.clOrdId );
 
 						} );
 						this.emit( 'conditionalCancelled', o );
-					
+
 					} );
 					break;
 				case 'TRIGGERED':
@@ -334,13 +357,13 @@ class DigitexAPI extends EVENTS {
 
 						this.conditionalOrders = this.conditionalOrders.filter( order => {
 
-							return !order.is( o.clOrdId ); 
+							return !order.is( o.clOrdId );
 
 						} );
 						this.emit( 'conditionalTriggered', o );
-					
+
 					} );
-                        
+
 					break;
 				case 'REJECTED':
 					this.emit( 'conditionalRejected', this.getError( data.errCode ) );
@@ -348,22 +371,22 @@ class DigitexAPI extends EVENTS {
 				default:
 					console.warn( `Unknown conditional status: ${ data.orderStatus }`, data );
 					break;
-				
+
 				}
-			
+
 			}
 			else if ( JSON.parse( msg.data.toString() ).status == 'error' ) {
 
-				console.error( `Error: ${ this.getError( JSON.parse( msg.data.toString() ).code ) }` ); 
+				console.error( `Error: ${ this.getError( JSON.parse( msg.data.toString() ).code ) }`.red );
 
 			}
 			else {
 
 				this.emit( 'ws-message', JSON.parse( msg.data.toString() ) );
 				console.log( JSON.parse( msg.data.toString() ) );
-			
+
 			}
-		
+
 		};
 		this.rate = {
 			current: 0,
@@ -372,29 +395,29 @@ class DigitexAPI extends EVENTS {
 		};
 		setInterval( () => {
 
-			this.rate.current = 0; 
+			this.rate.current = 0;
 
 		}, 1000 );
-	
+
 	}
 	levelHasOrder( level ) {
 
 		const t = this.orders.filter( order => {
 
 			return order.price == level;
-		
+
 		} );
 		if ( t.length > 0 ) {
 
-			return true; 
+			return true;
 
 		}
 		else {
 
-			return false; 
+			return false;
 
 		}
-	
+
 	}
 	requestTraderInfo() {
 
@@ -407,9 +430,9 @@ class DigitexAPI extends EVENTS {
 					'symbol':this.symbol
 				}
 			} ) );
-		
+
 		}
-	
+
 	}
 	set leverage( leverage ) {
 
@@ -423,48 +446,48 @@ class DigitexAPI extends EVENTS {
 					'symbol':this.symbol
 				}
 			} ) );
-		
+
 		}
-	
+
 	}
 	get spreadGap() {
 
-		return this.orderbook.spread.gap(); 
+		return this.orderbook.spread.gap();
 
 	}
 	get totalContractsOfOrders() {
 
 		let i = 0;this.orders.forEach( o => {
 
-			i += o.qty; 
+			i += o.qty;
 
-		} ); return i; 
+		} ); return i;
 
 	}
 	connect() {
- 
+
 		this.ws.onopen = () => {
 
 			this.emit( 'connect' );
 			this.send( JSON.stringify( {
 				'id': 2,
 				'method': 'subscribe',
-				'params': ['trades', 'orderbook_'+this.depth, 'index'].map( topic => {
+				'params': ['kline_1min', 'trades', `orderbook_${ this.depth }`, 'index'].map( topic => {
 
-					return this.symbol + '@' + topic; 
+					return `${ this.symbol  }@${  topic }`;
 
 				} )
 			} ) );
-		
+
 		};
 		this.ws.onclose = () => {
 
-			this.emit( 'close' ); 
+			this.emit( 'close' );
 
 		};
 		this.ws.onerror = err => {
 
-			this.emit( 'ws-error', err ); 
+			this.emit( 'ws-error', err );
 
 		};
 		this.on( 'connect', () => {
@@ -477,9 +500,9 @@ class DigitexAPI extends EVENTS {
 					'value': this.apikey
 				}
 			} ) );
-		
+
 		} );
-	
+
 	}
 	/**
      * Place an order. If opts.entry is omitted, it will place an opt.timeInForce (default: GTC) market order on opts.side for opts.qty (default: 1) contracts. If opts.entry is passed in, will place a limit order.
@@ -488,11 +511,11 @@ class DigitexAPI extends EVENTS {
      * @param {string} opts.timeInForce
      * @param {string} opts.side
      * @param {number} opts.qty
-     * 
+     *
      * @example DigitexAPI.placeOrder({side: 'BUY', qty: 10}); // Market long 10 contracts
-     * 
+     *
      * @example DigitexAPI.placeOrder({side: 'SELL', qty: 10, entry: 15005}); // Limit short 10 contracts at $15,005
-     * 
+     *
      */
 	placeOrder( opts ) {
 
@@ -509,7 +532,7 @@ class DigitexAPI extends EVENTS {
 				'timeInForce':opts.timeInForce || 'GTC'
 			}
 		} ) );
-	
+
 	}
 	/**
      * Cancels all conditional orders.
@@ -524,10 +547,10 @@ class DigitexAPI extends EVENTS {
 				'symbol': this.symbol
 			}
 		} ) );
-	
+
 	}
 	/** Cancel all orders at a certain price level (opts.price: xxxxx) or all orders on a certain side of the ladder (opts.side: 'BUY') or opts = {} to cancal all orders.
-     * 
+     *
      * @example DigitexAPI.cancelAllOrders({side: 'BUY'}); // Cancel all buy orders.
      * @example DigitexAPI.cancelAllOrders({price: 15005}); // Cancel all with a price of $15,005
      * @example DigitexAPI.cancelAllOrders({}); // Cancel All Orders
@@ -543,21 +566,21 @@ class DigitexAPI extends EVENTS {
 		};
 		if ( opts.side ) {
 
-			parameters.side = opts.side; 
+			parameters.side = opts.side;
 
 		}
 		else if ( opts.price ) {
 
-			parameters.px = opts.price; 
+			parameters.px = opts.price;
 
 		}
 		this.send( JSON.stringify( parameters ) );
-	
+
 	}
 	cancelOrder( payload ) {
 
 		this.send( JSON.stringify( payload ) );
-	
+
 	}
 	placeConditional( opts ) {
 
@@ -565,21 +588,21 @@ class DigitexAPI extends EVENTS {
 		opts.symbol = this.symbol;
 		const o = new ConditionalOrder( opts );
 		this.send( o.payload );
-	
+
 	}
 	get connected() {
 
-		return this.ws.readyState == ws.OPEN; 
+		return this.ws.readyState == ws.OPEN;
 
 	}
 	get balance() {
 
-		return this.trader.balance; 
+		return this.trader.balance;
 
 	}
 	get leverage() {
 
-		return; 
+		return;
 
 	}
 	UUID() {
@@ -590,16 +613,16 @@ class DigitexAPI extends EVENTS {
 		for ( let i = 0; i < 36; i++ ) {
 
 			s[i] = hexDigits.substr( Math.floor( Math.random() * 0x10 ), 1 );
-		
+
 		}
 		s[14] = '4';
 		// @ts-ignore
 		s[19] = hexDigits.substr( ( s[19] & 0x3 ) | 0x8, 1 );
 		s[8] = s[13] = s[18] = s[23] = '-';
-    
+
 		let uuid = s.join( '' );
 		return uuid;
-	
+
 	}
 
 }
@@ -613,7 +636,7 @@ class ConditionalOrder {
 		this.futuresPrice = opts.futuresPrice;
 		opts.offset = opts.offset || {};
 		this.offset = {
-			ticks: opts.offset.ticks || 0, // Should be positive or negative. 
+			ticks: opts.offset.ticks || 0, // Should be positive or negative.
 			trigger: opts.offset.trigger || 0,
 		};
 		this.pxValue = opts.pxValue || undefined;
@@ -628,14 +651,14 @@ class ConditionalOrder {
 		this.symbol = opts.symbol;
 		if ( ['LESS_EQUAL', 'GREATER_EQUAL'].includes( opts.condition ) ) {
 
-			this.condition = opts.condition; 
+			this.condition = opts.condition;
 
 		} else {
 
-			throw new Error( 'You must pass opts.condition of either "GREATER_EQUALS" or "LESS_EQUALS"' ); 
+			throw new Error( 'You must pass opts.condition of either "GREATER_EQUALS" or "LESS_EQUALS"' );
 
 		}
-	
+
 	}
 	get triggerPrice() {
 
@@ -647,18 +670,18 @@ class ConditionalOrder {
 		else if ( this.offset.trigger > 0 ) {
 
 			return this.px - ( this.tickSize * this.offset.trigger );
-		
+
 		} else if ( this.offset.trigger < 0 ) {
 
-			return this.px + ( this.tickSize * this.offset.trigger ); 
+			return this.px + ( this.tickSize * this.offset.trigger );
 
 		}
 		else {
 
-			return this.px; 
+			return this.px;
 
 		}
-	
+
 	}
 	get px() {
 
@@ -670,18 +693,18 @@ class ConditionalOrder {
 		else if ( this.offset.ticks != 0 && this.price ) {
 
 			return this.price + ( this.offset.ticks * this.tickSize );
-		
+
 		} else if ( this.price ) {
 
 			return this.price;
-		
+
 		}
 		else {
 
 			throw new Error( 'ConditionalOrder.price must be set.' );
-		
+
 		}
-	
+
 	}
 	get payload() {
 
@@ -702,12 +725,12 @@ class ConditionalOrder {
 				'timeInForce':this.timeInForce
 			}
 		} );
-	
+
 	}
 	is( id ) {
 
 		return this.clOrdId == id;
-	
+
 	}
 	get cancelPayload() {
 
@@ -720,7 +743,7 @@ class ConditionalOrder {
 				'symbol':this.symbol
 			}
 		} );
-	
+
 	}
 
 }
@@ -744,15 +767,15 @@ class Order extends EVENTS {
 		this.actionId = opts.actionId || undefined;
 		this.contracts = opts.contracts || [];
 		console.log( this );
-	
+
 	}
 	get isConditional() {
 
 		if ( this.triggerPrice > 0 ) {
 
-			return true; 
+			return true;
 
-		} return false; 
+		} return false;
 
 	}
 	cancelPayload() {
@@ -768,7 +791,7 @@ class Order extends EVENTS {
 					'symbol':this.symbol
 				}
 			};
-		
+
 		}
 		return {
 			'id':4,
@@ -778,7 +801,7 @@ class Order extends EVENTS {
 				'symbol':this.symbol
 			}
 		};
-	
+
 	}
 	placePayload( increase = false ) {
 
@@ -802,8 +825,8 @@ class Order extends EVENTS {
 					'timeInForce':this.timeInForce
 				}
 			};
-		
-		} 
+
+		}
 		return {
 			'id':7,
 			'method':'placeOrder',
@@ -817,30 +840,30 @@ class Order extends EVENTS {
 				'timeInForce': this.timeInForce
 			}
 		};
-	
+
 	}
 	update( data ) { // Called when an orderStatus or conOrderStatus is received
 
 		if ( data.droppedQty > 0 ) {
 
-			this.qty = this.qty - data.droppedQty; 
+			this.qty = this.qty - data.droppedQty;
 
 		}
 		else if ( data.droppedQty == 0 && data.qty == 0 ) {
 
-			this.status = 'FILLED'; this.emit( 'filled', this ); 
+			this.status = 'FILLED'; this.emit( 'filled', this );
 
 		}
 		else if ( data.qty > 0 ) {
 
-			this.filledQty += data.qty; 
+			this.filledQty += data.qty;
 
 		}
-	
+
 	}
 	is( id ) {
 
-		return this.id == id; 
+		return this.id == id;
 
 	}// Used to compare to an ID
 
