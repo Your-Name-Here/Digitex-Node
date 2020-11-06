@@ -60,13 +60,13 @@ Place a new order on the pair.
 | key      | true      | string | This is your API key provided from your exchange account |
 | symbol   | true      | string | This is the pair that this instance will track.          |
 
-Back to [methods]
 ---
+Back to [methods]
 
 [placeOrder]: <#place-order>
 [placeConditional]: <#place-conditional-order>
 [cancelOrder]: <#cancel-order>
 [cancelAllOrders]: <#cancel-all-orders>
 [cancelConditional]: <#cancel-conditional>
-[orderHasLevel]: <#orderhaslevel>
+[levelHasOrder]: <#levelhasorder>
 [methods]: <#methods>
