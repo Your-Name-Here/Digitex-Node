@@ -91,15 +91,15 @@ Back to [methods]
 ### CancelOrder
 Cancels an order that is sitting on the orderbook
 
-**Parameters**: payload {object} see below
+**Parameters**: order {Order} see below
 | Property | Required  | Type  |                         Description                          |
 |----------|:--------: | :---: |:------------------------------------------------------------ |
-| payload  | true      |object | This is returned from the Order object using `Order.cancelPayload`  |
+|  order   | true      | Order | This is an instance of the Order class. When an order is placed,a new Order object is placed into the `API.orders` array. Using this array, you can cancel the order. |
 
 **Example** 
 
 ```js
-BTCUSD.cancelOrder(Order.cancelPayload);
+BTCUSD.cancelOrder(Order);
 ```
 
 Also see: 
