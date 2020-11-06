@@ -50,7 +50,7 @@ const BTCUSD = new API( {
 
 ---
 
-##### Place Order
+#### Place Order
 Place a new order on the pair.
 
 **Parameters**: opts {object} see below
@@ -79,12 +79,40 @@ BTCUSD.placeOrder({
     qty:  10
 });
 ```
----
+Also see: 
+[cancelOrder], [cancelAllOrders]
+
 Back to [methods]
+
+---
+
+#### CancelOrder
+Cancels an order that is sitting on the orderbook
+
+**Parameters**: payload {object} see below
+| Property | Required  | Type  |                         Description                          |
+|----------|:--------: | :---: |:------------------------------------------------------------ |
+| payload  | true      |object | This is returned from the Order object using `Order.cancelPayload`  |
+
+**Example** 
+
+```js
+// Market buy 10 contracts
+
+BTCUSD.cancelOrder(Order.cancelPayload);
+```
+
+Also see: 
+[placeOrder], [cancelAllOrders]
+
+Back to [methods]
+
+---
+
 
 [placeOrder]: <#place-order>
 [placeConditional]: <#place-conditional-order>
-[cancelOrder]: <#cancel-order>
+[cancelOrder]: <#cancelorder>
 [cancelAllOrders]: <#cancel-all-orders>
 [cancelConditional]: <#cancel-conditional>
 [levelHasOrder]: <#levelhasorder>
