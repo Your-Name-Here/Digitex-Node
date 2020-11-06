@@ -53,13 +53,32 @@ const BTCUSD = new API( {
 ##### Place Order
 Place a new order on the pair.
 
-**Example** `BTCUSD.placeOrder({opts})`
 **Parameters**: opts {object} see below
-| Property | Required  | Type  |                         Description                       |
-|----------|:--------: | :---: |:--------------------------------------------------------- |
-| key      | true      | string | This is your API key provided from your exchange account |
-| symbol   | true      | string | This is the pair that this instance will track.          |
+| Property | Required  | Type  |                         Description                          |
+|----------|:--------: | :---: |:------------------------------------------------------------ |
+| entry    | false     |integer| The price that you would like the limit order to execute at.</br>If omitted, the order becomes a market order. |
+| side     | true      |string | BUY/SELL: "BUY" for long orders, "SELL" for short orders.    |
+| qty      | true      |integer| positive, none-zero integer for how many contracts you'd like to place the order for. |
 
+**Example** 
+
+```js
+// Market buy 10 contracts
+
+BTCUSD.placeOrder({
+    side: 'BUY',
+    qty:  10
+});
+```
+```js
+// Limit buy 10 contracts at $15,045
+
+BTCUSD.placeOrder({
+    entry: 15045,
+    side: 'BUY',
+    qty:  10
+});
+```
 ---
 Back to [methods]
 
