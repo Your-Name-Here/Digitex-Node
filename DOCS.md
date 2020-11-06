@@ -1,13 +1,15 @@
-### Documentation
+# Documentation
 
 Start by requiring the package
-`const API = require( 'digitex-node' ).api;`
+```js
+const API = require( 'digitex-node' ).api;
+```
 
-##### Instantiation
+### Instantiation
 Create a new instance of the class.
 
 **Example:** 
-```
+```js
 const BTCUSD = new API( { 
     key: 'xxx', 
     symbol: 'BTCUSD-PERP' 
@@ -20,7 +22,7 @@ const BTCUSD = new API( {
 | key      | true      | string | This is your API key provided from your exchange account |
 | symbol   | true      | string | This is the pair that this instance will track.          |
 ---
-## Methods
+### Methods
 
 |       Method      | Description                                                                                       |
 |-------------------|---------------------------------------------------------------------------------------------------|
@@ -31,7 +33,7 @@ const BTCUSD = new API( {
 | [cancelConditional] | Cancel a single conditional order                                                                 |
 | [levelHasOrder]     | Returns a boolean, true if there is at least one order at a price level.                          |
 
-## Properties
+### Properties
 
 |       Property    |Type    | Description                                                                               |
 |-------------------|:------:|-------------------------------------------------------------------------------------------|
@@ -42,7 +44,7 @@ const BTCUSD = new API( {
 
 
 
-##### Changing Leverage
+### Changing Leverage
     
 *Change leverage on a pair.*
 
@@ -50,7 +52,7 @@ const BTCUSD = new API( {
 
 ---
 
-#### Place Order
+### Place Order
 Place a new order on the pair.
 
 **Parameters**: opts {object} see below
@@ -86,7 +88,7 @@ Back to [methods]
 
 ---
 
-#### CancelOrder
+### CancelOrder
 Cancels an order that is sitting on the orderbook
 
 **Parameters**: payload {object} see below
