@@ -24,12 +24,12 @@ const BTCUSD = new API( {
 
 |       Method      | Description                                                                                       |
 |-------------------|---------------------------------------------------------------------------------------------------|
-|     placeOrder    | Places an order on the orderbook                                                                  |
-| placeConditional  | Place a conditional order.                                                                        |
-|    cancelOrder    | Cancels an order already on the orderbook.                                                        |
-| cancelAllOrders   | Cancels all non-conditional orders. Can pass an opts object to dictate which orders are canceled. |
-| cancelConditional | Cancel a single conditional order                                                                 |
-| levelHasOrder     | Returns a boolean, true if there is at least one order at a price level.                          |
+|     [placeOrder]    | Places an order on the orderbook                                                                  |
+| [placeConditional]  | Place a conditional order.                                                                        |
+|    [cancelOrder]    | Cancels an order already on the orderbook.                                                        |
+| [cancelAllOrders]   | Cancels all non-conditional orders. Can pass an opts object to dictate which orders are canceled. |
+| [cancelConditional] | Cancel a single conditional order                                                                 |
+| [levelHasOrder]     | Returns a boolean, true if there is at least one order at a price level.                          |
 
 ## Properties
 
@@ -60,4 +60,13 @@ Place a new order on the pair.
 | key      | true      | string | This is your API key provided from your exchange account |
 | symbol   | true      | string | This is the pair that this instance will track.          |
 
+Back to [methods]
 ---
+
+[placeOrder]: <#place-order>
+[placeConditional]: <#place-conditional-order>
+[cancelOrder]: <#cancel-order>
+[cancelAllOrders]: <#cancel-all-orders>
+[cancelConditional]: <#cancel-conditional>
+[orderHasLevel]: <#orderhaslevel>
+[methods]: <#methods>
