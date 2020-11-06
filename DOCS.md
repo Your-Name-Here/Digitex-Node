@@ -99,8 +99,6 @@ Cancels an order that is sitting on the orderbook
 **Example** 
 
 ```js
-// Market buy 10 contracts
-
 BTCUSD.cancelOrder(Order.cancelPayload);
 ```
 
