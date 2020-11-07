@@ -1,5 +1,11 @@
 # Documentation
 
+| Section    | Description                             |
+|------------|-----------------------------------------|
+| [Methods](#methods)    | Methods of the class                    |
+| [Properties](#properties) | Properties of the class                 |
+| [Events](#events)     | Available event that you can attach to. |
+
 Start by requiring the package
 ```js
 const API = require( 'digitex-node' ).api;
