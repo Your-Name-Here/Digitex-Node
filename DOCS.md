@@ -1,5 +1,11 @@
 # Documentation
 
+| Section    | Description                             |
+|------------|-----------------------------------------|
+| [Methods](#methods)    | Methods of the class                    |
+| [Properties](#properties) | Properties of the class                 |
+| [Events](#events)     | Available event that you can attach to. |
+
 Start by requiring the package
 ```js
 const API = require( 'digitex-node' ).api;
@@ -43,6 +49,28 @@ const BTCUSD = new API( {
 | conditionalOrders | array  |  An array of conditionalOrders currently on the orderbook                                 |
 | symbol            | string |  **Read-only** The symbol of the pair that the exchang understands  *Ex.* ``BTCUSD-PERP`` |
 
+## Events
+Attach to an  event with `API.on('eventName', data => { /* Your Code... */ })`
+|       Event Name  |Data Type  | Description                                                                               |
+|-------------------|:------:|-------------------------------------------------------------------------------------------|
+|     ready         | void   |  Emitted when all data is loaded. Trader data, pair data and market data **Most actions need to wait for this event!**  |
+|     connect       | void   |  Emitted when the websocket connection is opened.                                          |
+|     close         | void   |  Emitted when the websocket connection is closed.                                          |
+| orderFilled            | Order  |   Emitted when an order is filled and returns the Order object.                        |
+| orderCancelled         | Order  |   Emitted when an order is cancelled and returns the Order object.                   |
+| orderRejected          | string |   Emitted when an order is rejected and returns the error message.                   |
+| orderPlaced | Order  |  Emitted when an order is placed on the orderbook by the trader.                                |
+| error | string  |  Emitted when the exchange returns an error of any type. The data is the error message.              |
+| authorized | void  |  Emitted when successfully authorized to your account using the API key provided.                 |
+| spotUpdate | float  |  Emitted when the spot price changes. Data is the new spot price.                                |
+| futuresPxUpdate | integer  |  Emitted when the futures price changes. Data is the new futures price.                     |
+| kline | object  |  Emitted when a new k-line (candle) is received from the exchange. Data is the candle data.          |
+| gapChange | float  |  Emitted when the gap in the spread changes. Data is the price difference between bid and ask price. |
+| trades | object  |  Emitted when the exchange sends a new trade. Data is the new trade info.                           |
+| conditionalPlaced | ConditionalOrder  |  Emitted when a conditional order is placed on the exchange                    |
+| conditionalCancelled | ConditionalOrder  |  Emitted when a conditional order is cancelled on the exchange               |
+| conditionalTriggered | ConditionalOrder  |  Emitted when a conditional order is triggered on the exchange              |
+| conditionalRejected | string  |  Emitted when a conditional order is rejected and is passed the error message.         |
 
 
 ### Changing Leverage
