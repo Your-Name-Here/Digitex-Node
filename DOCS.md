@@ -28,6 +28,7 @@ const BTCUSD = new API( {
 |-------------------|---------------------------------------------------------------------------------------------------|
 |     [placeOrder]    | Places an order on the orderbook                                                                  |
 | [placeConditional]  | Place a conditional order.                                                                        |
+|   [closePosition]   | Close position (all contracts)                                                                    |
 |    [cancelOrder]    | Cancels an order already on the orderbook.                                                        |
 | [cancelAllOrders]   | Cancels all non-conditional orders. Can pass an opts object to dictate which orders are canceled. |
 | [cancelConditional] | Cancel a single conditional order                                                                 |
@@ -87,6 +88,30 @@ Also see:
 Back to [methods]
 
 ---
+### Close Position
+The trader can close the position (all available contracts)
+
+**Parameters**:
+| Parameter | Required  | Type  |                         Description                          |
+|----------|:--------: | :---: |:------------------------------------------------------------ |
+| price    | false     | float | The price that you would like the position to execute at with a limit order.</br>If omitted, the order becomes a market order. |
+
+**Example** 
+
+```js
+// Market close your position
+
+BTCUSD.closePosition();
+```
+```js
+// Limit close your position at $15,045
+
+BTCUSD.placeOrder( 15045 );
+```
+
+Back to [methods]
+
+---
 
 ### CancelOrder
 Cancels an order that is sitting on the orderbook
@@ -111,6 +136,7 @@ Back to [methods]
 
 
 [placeOrder]: <#place-order>
+[closePosition]: <#close-position>
 [placeConditional]: <#place-conditional-order>
 [cancelOrder]: <#cancelorder>
 [cancelAllOrders]: <#cancel-all-orders>

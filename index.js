@@ -15,15 +15,40 @@ class DigitexAPI extends EVENTS {
 		this.authed = false;
 		this.spot = 0;
 		this.futuresPrice = 0;
-		this.depth = ( opts.depth > 25 ? 25 : ( opts.depth < 1 ? 1 : opts.depth ) );
+		this.depth = ( opts.depth > 25 ? 25 : ( opts.depth < 1 ? 1 : opts.depth || 25 ) );
 		this.trader = { balance: 0, leverage: 1, pnl: 0, upnl: 0 };
 		this.position = 0;
+		this.authorized = false;
+		this.dataFetched = false;
+		this.traderDataFetched = false;
+		this.baseURL = 'https://rest.mapi.digitexfutures.com';
+		request.get( `${ this.baseURL }/api/v1/public/contracts`, ( err, res, body ) => {
+
+			body = JSON.parse( body );
+			body.data.forEach( pair => {
+
+				if ( pair.symbol == this.symbol ) {
+
+					this.maxLeverage = pair.maxLeverage;
+					this.tickSize = pair.tickSize;
+					this.dataFetched = true;
+					if ( this.isReady() ) {
+
+						this.emit( 'ready' );
+
+					}
+
+				}
+
+			} );
+
+		} );
 		this.orderbook = {
-			book: {  asks: [], bids: [] },
+			book: { asks: [], bids: [] },
 			spread: {
 				ask: 0, bid: 0, gap: () => {
 
-					return ( ( this.orderbook.spread.ask - this.orderbook.spread.bid )/this.tickSize )-1;
+					return ( ( this.orderbook.spread.ask - this.orderbook.spread.bid ) / this.tickSize ) - 1;
 
 				}
 			},
@@ -83,11 +108,11 @@ class DigitexAPI extends EVENTS {
 		this.errorCodes = {
 			10: 'ID Doesn\'t exist.',
 			10501: 'Invalid credentials.',
-			14:	'Unknown trader.',
-			18:	'Invalid leverage.',
+			14: 'Unknown trader.',
+			18: 'Invalid leverage.',
 			19: 'Invalid price.',
-			20:	'Invalid quantity.',
-			22:	'No market price.',
+			20: 'Invalid quantity.',
+			22: 'No market price.',
 			27: 'Not enough balance.',
 			3: 'ID already exists.',
 			3001: 'Bad Request (invalid parameters, etc.).',
@@ -107,20 +132,20 @@ class DigitexAPI extends EVENTS {
 			3015: 'Trading is not available.',
 			3016: 'Authentication in progress.',
 			3017: 'Request limit exceeded.',
-			34:	'Invalid contract ID.',
-			35:	'Rate limit exceeded.',
-			36:	'No contracts.',
+			34: 'Invalid contract ID.',
+			35: 'Rate limit exceeded.',
+			36: 'No contracts.',
 			37: 'No opposing orders.',
 			40: 'Price is worse than liquidation price.',
 			4001: 'System maintenance.',
 			45: 'Tournament in progress.',
-			53:	'Max quantity exceeded.',
-			54:	'PnL is too negative.',
-			55:	'Order would become invalid.',
-			58:	'Trading suspended.',
-			63:	'Can\'t be filled.',
+			53: 'Max quantity exceeded.',
+			54: 'PnL is too negative.',
+			55: 'Order would become invalid.',
+			58: 'Trading suspended.',
+			63: 'Can\'t be filled.',
 			65: 'Too many conditional orders.',
-			68:	'Too many orders.'
+			68: 'Too many orders.'
 		};
 		this.getError = errID => {
 
@@ -142,8 +167,22 @@ class DigitexAPI extends EVENTS {
 
 			if ( id == 1 ) {
 
-				console.log( '    Authorized'.green );
-				this.requestTraderInfo();
+				if ( JSON.parse( msg.data.toString() ).status == 'ok' ) {
+
+					this.authorized = true;
+					this.emit( 'authorized' );
+					if ( this.isReady() ) {
+
+						this.emit( 'ready' );
+
+					}
+					this.requestTraderInfo();
+
+				} else {
+
+					this.emit( 'error', this.getError( JSON.parse( msg.data.toString() ).code ) );
+
+				}
 
 			}
 			if ( channel == 'index' ) {
@@ -196,6 +235,8 @@ class DigitexAPI extends EVENTS {
 					}
 
 				} );
+				this.requestTraderInfo();
+				this.position = ( data.positionType == 'SHORT' ? 0 - data.positionContracts : data.positionContracts * 1 );
 				this.emit( 'orderFilled', data );
 
 			}
@@ -249,7 +290,7 @@ class DigitexAPI extends EVENTS {
 					this.orders.forEach( order => {
 
 						// Otherwise Update it with the new data.
-						console.log( ( `Unknown Status: ${ data.orderStatus }` ).red );
+						console.error( ( `Unknown Status: ${ data.orderStatus }` ) );
 						//TODO Create a position here
 						if ( order.is( data.origClOrdId ) ) {
 
@@ -259,6 +300,7 @@ class DigitexAPI extends EVENTS {
 						else {
 
 							this.orders.push( new Order( data ) );
+							this.emit( 'orderPlaced' );
 
 						}
 
@@ -296,32 +338,37 @@ class DigitexAPI extends EVENTS {
 					upnl: data.upnl
 				};
 				this.position = ( data.positionType == 'SHORT' ? 0 - data.positionContracts : data.positionContracts * 1 );
+				this.positions = data.contracts;
+				this.emit( 'positionsUpdated' );
 				// Rebuild the orders and positions arrays
 				data.activeOrders.forEach( order => {
 
 					order.symbol = data.symbol;
 					this.orders.push( new Order( order ) );
+					this.emit( 'orderPlaced' );
 
 				} );
 				data.conditionalOrders.forEach( order => {
 
 					order.symbol = data.symbol;
-					this.conditionalOrders.push( new Order( order ) );
+					this.conditionalOrders.push( new ConditionalOrder( order ) );
+					this.emit( 'conditionalPlaced' );
 
 				} );
 				data.contracts.forEach( contract => {
 
 					contract.symbol = data.symbol;
 					this.positions.push( new Position( contract ) );
+					this.emit( 'newPosAdded' );
 
 				} );
-				console.log( '    Trader Balance(DGTX):     ', this.trader.balance );
-				console.log( '    Trader Orders:            ', this.orders.length );
-				console.log( '    Trader Conditional Orders:', this.conditionalOrders.length );
-				console.log( '    Trader Positions:         ', this.positions.length );
-				console.log( '    Trader PnL:               ', this.trader.pnl );
-				console.log( '    Trader Unrealized PnL:    ', this.trader.upnl );
-				console.log( '' );
+
+				this.traderDataFetched = true;
+				if ( this.isReady() ) {
+
+					this.emit( 'ready' );
+
+				}
 
 			}
 			//Conditional Orders
@@ -377,13 +424,12 @@ class DigitexAPI extends EVENTS {
 			}
 			else if ( JSON.parse( msg.data.toString() ).status == 'error' ) {
 
-				console.error( `Error: ${ this.getError( JSON.parse( msg.data.toString() ).code ) }`.red );
+				console.error( `ID: ${ JSON.parse( msg.data.toString() ).id } \nError: ${ this.getError( JSON.parse( msg.data.toString() ).code ) }` );
 
 			}
 			else {
 
 				this.emit( 'ws-message', JSON.parse( msg.data.toString() ) );
-				console.log( JSON.parse( msg.data.toString() ) );
 
 			}
 
@@ -399,6 +445,26 @@ class DigitexAPI extends EVENTS {
 
 		}, 1000 );
 
+	}
+	closePosition( price = 0 ){
+
+		let ordType = 'MARKET';
+		let payload = {
+			'id': 12,
+			'method': 'closePosition',
+			'params': {
+				'ordType': ordType,
+				'symbol': this.symbol
+			}
+		};
+		if ( price != 0 ) {
+
+			payload.params.ordType = 'LIMIT';
+			payload.params.px = price;
+		
+		}
+		this.send( JSON.stringify( payload ) );	
+	
 	}
 	levelHasOrder( level ) {
 
@@ -462,6 +528,11 @@ class DigitexAPI extends EVENTS {
 			i += o.qty;
 
 		} ); return i;
+
+	}
+	isReady(){
+
+		return this.traderDataFetched && this.authorized && this.dataFetched;
 
 	}
 	connect() {
@@ -577,9 +648,9 @@ class DigitexAPI extends EVENTS {
 		this.send( JSON.stringify( parameters ) );
 
 	}
-	cancelOrder( payload ) {
+	cancelOrder( order ) {
 
-		this.send( JSON.stringify( payload ) );
+		this.send( JSON.stringify( order.cancelPayload() ) );
 
 	}
 	placeConditional( opts ) {
@@ -587,6 +658,7 @@ class DigitexAPI extends EVENTS {
 		opts.futuresPrice = this.futuresPrice;
 		opts.symbol = this.symbol;
 		const o = new ConditionalOrder( opts );
+		console.log( o.payload );
 		this.send( o.payload );
 
 	}
@@ -602,7 +674,7 @@ class DigitexAPI extends EVENTS {
 	}
 	get leverage() {
 
-		return;
+		return this.trader.leverage;
 
 	}
 	UUID() {
@@ -626,7 +698,6 @@ class DigitexAPI extends EVENTS {
 	}
 
 }
-module.exports = DigitexAPI;
 
 class ConditionalOrder {
 
@@ -647,8 +718,9 @@ class ConditionalOrder {
 		this.qty = opts.qty || opts.origQty || 1;
 		this.side = opts.side;
 		this.timeInForce = ( ['GTC', 'FOC'].includes( opts.timeInForce ) ? opts.timeInForce : 'GTC' );
-		this.mayIncrPosition = opts.mayIncrPosition;
+		this.mayIncrPosition = opts.mayIncrPosition || false;
 		this.symbol = opts.symbol;
+		let err = new Error( 'd' );
 		if ( ['LESS_EQUAL', 'GREATER_EQUAL'].includes( opts.condition ) ) {
 
 			this.condition = opts.condition;
@@ -766,7 +838,6 @@ class Order extends EVENTS {
 		this.filledQty = opts.qty || 0;
 		this.actionId = opts.actionId || undefined;
 		this.contracts = opts.contracts || [];
-		console.log( this );
 
 	}
 	get isConditional() {
@@ -875,3 +946,7 @@ class Position {
 	}
 
 }
+module.exports.api = DigitexAPI;
+module.exports.Order = Order;
+module.exports.ConditionalOrder = ConditionalOrder;
+module.exports.Position = Position;
