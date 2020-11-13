@@ -16,14 +16,11 @@ License
 
 ### Changelog
 
-**v.1.1.0** - Initial Commit - Stable
+**v.1.0.0** - Initial Commit - Stable
 
 - Added ``API.closePosition()`` function for closing whole position in one call
 - Added fetching of user account data prior to ready event firing
 - Added ``ready`` event
-
-**v.1.0.0** - Initial Commit - Unstable - see [issue #6] for fix
-
 - Added most of the websocket api
 - Added orderbook tracking
 - Added order managagment
