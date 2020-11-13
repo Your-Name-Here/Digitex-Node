@@ -21,6 +21,7 @@ class DigitexAPI extends EVENTS {
 		this.authorized = false;
 		this.dataFetched = false;
 		this.traderDataFetched = false;
+		this.readyTriggered = false;
 		this.baseURL = 'https://rest.mapi.digitexfutures.com';
 		request.get( `${ this.baseURL }/api/v1/public/contracts`, ( err, res, body ) => {
 
@@ -532,7 +533,15 @@ class DigitexAPI extends EVENTS {
 	}
 	isReady(){
 
-		return this.traderDataFetched && this.authorized && this.dataFetched;
+		if ( !this.readyTriggered ) {
+
+			return this.traderDataFetched && this.authorized && this.dataFetched;
+		
+		} else {
+
+			return false;
+
+		}
 
 	}
 	connect() {
@@ -707,7 +716,7 @@ class ConditionalOrder {
 		this.futuresPrice = opts.futuresPrice;
 		opts.offset = opts.offset || {};
 		this.offset = {
-			ticks: opts.offset.ticks || 0, // Should be positive or negative.
+			ticks: opts.offset.ticks || 0, // Should be non-zero, if passed.
 			trigger: opts.offset.trigger || 0,
 		};
 		this.pxValue = opts.pxValue || undefined;
@@ -717,7 +726,7 @@ class ConditionalOrder {
 		this.clOrdId = opts.clOrdId || undefined;
 		this.qty = opts.qty || opts.origQty || 1;
 		this.side = opts.side;
-		this.timeInForce = ( ['GTC', 'FOC'].includes( opts.timeInForce ) ? opts.timeInForce : 'GTC' );
+		this.timeInForce = ( ['GTC', 'FOK', 'GTF', 'IOC', 'GFD'].includes( opts.timeInForce ) ? opts.timeInForce : 'GTC' );
 		this.mayIncrPosition = opts.mayIncrPosition || false;
 		this.symbol = opts.symbol;
 		let err = new Error( 'd' );
@@ -727,7 +736,7 @@ class ConditionalOrder {
 
 		} else {
 
-			throw new Error( 'You must pass opts.condition of either "GREATER_EQUALS" or "LESS_EQUALS"' );
+			throw new Error( 'You must pass opts.condition of either "GREATER_EQUAL" or "LESS_EQUAL"' );
 
 		}
 
