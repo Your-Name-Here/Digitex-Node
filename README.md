@@ -1,6 +1,10 @@
 # Digitex - Node Wrapper
 
 This is a node package that can be used to connect to the [Digitex Futures Exchange] and manipulate account data or fetch market data.
+
+> DISCLAIMER: This project is a work in progress but is in a stable state. A lot of work still needs to be put in to implement all API functionality and add 
+documentation. Some changes may be breaking but semantic versioning will be followed so it doesnt break your project. 
+
 ### Installation
 
 `npm install digitex-node --save`
