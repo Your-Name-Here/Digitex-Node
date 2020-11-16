@@ -1,8 +1,92 @@
-const EVENTS = require( 'events' ).EventEmitter;
-const request = require( 'request' );
-const ws = require( 'ws' );
+class Events {
 
-class DigitexAPI extends EVENTS {
+	constructor() {
+
+		this.events = {};
+		this._maxListeners = 10;
+
+	}
+	get eventCount() {
+
+		return Object.keys( this.events ).length;
+
+	}
+	get listenerCount() {
+
+		let d = 0;
+		Object.keys( this.events ).forEach( e => {
+
+			d += e.length;
+
+		} );
+		return d;
+
+	}
+	set maxListeners( n ) {
+
+		this._maxListeners = Math.abs( n );
+
+	}
+	get maxListeners() {
+
+		return this._maxListeners;
+
+	}
+	emit( event, ...data ) {
+
+		if ( Object.keys( this.events ).includes( event ) ) {
+
+			this.events[event].forEach( cb => {
+
+				cb( data );
+
+			} );
+
+		} else {
+
+			this.events[event] = [];
+
+		}
+
+	}
+	on( event, cb ) {
+
+		if ( Object.keys( this.events ).includes( event ) ) {
+
+			if ( this.events[event].length > this.maxListeners ) {
+
+				console.warn( `Max listeners (${ this.maxListeners }) exceeded (${ this.events[event].length }) on event '${ event }'. Total Listeners for all events (${ this.listenerCount }). This could be a result of a memory leak.` );
+				//Return;
+
+			}
+
+			this.events[event].push( cb );
+
+		} else {
+
+			this.events[event] = [];
+			this.events[event].push( cb );
+
+		}
+
+	}
+	off( event, cb ) {
+
+		if ( Object.keys( this.events ).includes( event ) ) {
+
+			this.events[event] = this.events[event].filter( scb => {
+
+				return scb != cb;
+
+			} );
+
+		};
+
+	}
+
+}
+
+class DigitexAPI extends Events {
 
 	constructor( opts ) {
 
@@ -22,10 +106,12 @@ class DigitexAPI extends EVENTS {
 		this.dataFetched = false;
 		this.traderDataFetched = false;
 		this.readyTriggered = false;
+		this.events = {};
 		this.baseURL = 'https://rest.mapi.digitexfutures.com';
-		request.get( `${ this.baseURL }/api/v1/public/contracts`, ( err, res, body ) => {
+		console.log( 'New API instance.' );
+		this.get( `${ this.baseURL }/api/v1/public/contracts` ).then( body => {
 
-			body = JSON.parse( body );
+			body = JSON.parse( body.data );
 			body.data.forEach( pair => {
 
 				if ( pair.symbol == this.symbol ) {
@@ -80,7 +166,7 @@ class DigitexAPI extends EVENTS {
 
 		}, 1000 ); // Digitex api rate limit is max of 10 per second. We reset the calls to 0 every second.
 
-		this.ws = new ws( 'wss://ws.mapi.digitexfutures.com' );
+		this.ws = new WebSocket( 'wss://ws.mapi.digitexfutures.com' );
 
 		this.rateLimit = {
 			current: 0,
@@ -467,6 +553,38 @@ class DigitexAPI extends EVENTS {
 		this.send( JSON.stringify( payload ) );	
 	
 	}
+	get( url ) {
+
+		return new Promise( ( resolve, reject ) => {
+
+			// Set up our HTTP request
+			let xhr = new XMLHttpRequest();
+
+			// Setup our listener to process completed requests
+			xhr.onload = function () {
+
+				// Process our return data
+				if ( xhr.status >= 200 && xhr.status < 300 ) {
+
+					resolve( { data: xhr.responseText } );
+
+				} else {
+
+					reject( xhr.responseText );
+
+				}
+
+			};
+
+			// Create and send a GET request
+			// The first argument is the post type (GET, POST, PUT, DELETE, etc.)
+			// The second argument is the endpoint URL
+			xhr.open( 'GET', url );
+			xhr.send();
+
+		} );
+
+	}
 	levelHasOrder( level ) {
 
 		const t = this.orders.filter( order => {
@@ -672,7 +790,7 @@ class DigitexAPI extends EVENTS {
 	}
 	get connected() {
 
-		return this.ws.readyState == ws.OPEN;
+		return this.ws.readyState == WebSocket.OPEN;
 
 	}
 	get balance() {
@@ -828,7 +946,7 @@ class ConditionalOrder {
 
 }
 
-class Order extends EVENTS {
+class Order extends Events {
 
 	constructor( opts ) {
 
@@ -954,7 +1072,3 @@ class Position {
 	}
 
 }
-module.exports.api = DigitexAPI;
-module.exports.Order = Order;
-module.exports.ConditionalOrder = ConditionalOrder;
-module.exports.Position = Position;
